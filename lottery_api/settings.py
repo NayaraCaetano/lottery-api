@@ -28,6 +28,7 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 SECRET_KEY = config('SECRET_KEY', default='not available')
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=Csv())
 
+AUTH_USER_MODEL = 'authentication.User'
 
 # Application definition
 
@@ -43,6 +44,9 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'rest_framework',
+
+    # Project
+    'authentication',
 
 ]
 
