@@ -1,0 +1,57 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: docker:18.06.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Configura ambiente para build
+          command: |
+            apk add --no-cache \
+              python3
+            pip3 install \
+              docker-compose==1.22.0
+      - restore_cache:
+          name: Restaura cache do CircleCI
+          keys:
+            - v1-{{ .Branch }}
+            - v1-master
+            - v1
+          paths:
+            - /caches/app.tar
+      - run:
+          name: Restaura cache de imagens dos layers do Docker
+          command: |
+            set +o pipefail
+            docker load -i /caches/app.tar | true
+      - run:
+          name: Faz o build da imagem do Docker
+          command: |
+            echo "${CIRCLE_SHA1}" > version
+            docker build --cache-from=lottery-api -t lottery-api .
+      - run:
+          name: Salva cache de imagens dos layers do Docker
+          command: |
+            mkdir -p /caches
+            docker save -o /caches/app.tar lottery-api
+      - save_cache:
+          name: Salva cache do CircleCI
+          key: v1-{{ .Branch }}-{{ epoch }}
+          paths:
+            - /caches/app.tar
+      - run:
+          name: Roda a suite de testes
+          command: |
+            set -e
+            docker-compose -f .circleci/docker-compose.yml run lottery_api test
+            docker cp circleci_lottery_api_run_1:/var/www/coverage.xml coverage.xml
+            docker-compose down
+
+      - run:
+          when: always
+          name: Atualiza o coverage Codacy
+          command: |
+            pip3 install codacy-coverage
+            python-codacy-coverage -r coverage.xml

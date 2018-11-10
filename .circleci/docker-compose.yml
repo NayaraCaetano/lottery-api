@@ -1,0 +1,10 @@
+version: "3"
+services:
+    lottery_api:
+        image: lottery-api
+        links:
+            - database:database
+    database:
+        image: postgres:alpine
+        environment:
+            POSTGRES_PASSWORD: postgres
