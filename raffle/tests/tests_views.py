@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse_lazy
+from django.utils import timezone
 from model_mommy import mommy
 from parameterized import parameterized
 from rest_framework.test import APIClient
@@ -19,6 +20,13 @@ def data_raffle():
             "bike"
         ],
         "quantity": 5,
+    }
+
+
+def data_apply():
+    return {
+        "buyer_cpf": "11111111111",
+        "buyer_email": "bruce@batman.com"
     }
 
 
@@ -108,6 +116,15 @@ class RaffleRetrieveUpdateDestroyAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(len(response.json()[field]), 1)
 
+    def test_alterady_closed(self):
+        self.obj.closed_in = timezone.now()
+        self.obj.save()
+        self.client.force_authenticate(self.user)
+        response = self.client.put(self.url, data=data_raffle())
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Raffle.objects.count(), 1)
+        self.assertEqual(len(response.json()['non_field_errors']), 1)
+
     @parameterized.expand([
         ('name',),
         ('prize',),
@@ -143,7 +160,7 @@ class RaffleRetrieveUpdateDestroyAPIViewTestCase(TestCase):
         self.assertIsNotNone(self.obj.closed_in)
 
 
-class ExecuteRaffleAPIView(TestCase):
+class ExecuteRaffleAPIViewTest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
@@ -175,10 +192,11 @@ class ExecuteRaffleAPIView(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 400)
 
-    @patch('raffle.models.execute_raffle', return_value={'result': 1})
+    @patch('raffle.models.execute_raffle')
     def test_return_if_ok(self, mock_execution):
         self.client.force_authenticate(self.user)
-        mommy.make(RaffleApplication, raffle=self.obj)
+        obj = mommy.make(RaffleApplication, raffle=self.obj)
+        mock_execution.return_value = {'result': obj.id}
         mommy.make(RaffleApplication, raffle=self.obj)
         mommy.make(RaffleApplication, raffle=self.obj)
         mommy.make(RaffleApplication, raffle=self.obj)
@@ -186,3 +204,27 @@ class ExecuteRaffleAPIView(TestCase):
         self.assertEqual(response.status_code, 200)
         mock_execution.assert_called()
         self.assertEqual(len(response.json()['winners']), 1)
+
+
+class RaffleApplicationAPIViewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = mommy.make(User)
+        self.obj = mommy.make(Raffle, creator=self.user, quantity=1)
+        self.url = reverse_lazy('raffle_apply', kwargs={'pk': self.obj.pk})
+
+    def test_apply(self):
+        response = self.client.put(self.url, data=data_apply())
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(self.obj.raffleapplication_set.count(), 1)
+
+    def test_cant_apply_more_than_quantity(self):
+        mommy.make(RaffleApplication, raffle=self.obj)
+        response = self.client.put(self.url, data=data_apply())
+        self.assertEqual(400, response.status_code)
+
+    def test_closed_raffles_arent_a_option(self):
+        self.obj.closed_in = timezone.now()
+        self.obj.save()
+        response = self.client.put(self.url, data=data_apply())
+        self.assertEqual(404, response.status_code)

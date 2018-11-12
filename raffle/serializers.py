@@ -8,17 +8,22 @@ class RaffleApplicationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RaffleApplication
-        exclude = ('raffle',)
+        fields = '__all__'
+        read_only_fields = ('winner', 'raffle')
 
 
 class RaffleSerializer(serializers.ModelSerializer):
     close_raffle = serializers.BooleanField(default=False)
     winners = RaffleApplicationSerializer(read_only=True, many=True)
+    applications_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Raffle
         fields = '__all__'
         read_only_fields = ('id', 'creator', 'closed_in', 'close', 'winners')
+
+    def get_applications_count(self, obj):
+        return obj.raffleapplication_set.count()
 
     def validate(self, data):
         if self.instance and self.instance.closed_in:

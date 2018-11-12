@@ -38,4 +38,6 @@ class RaffleApplication(models.Model):
     def save(self, *args, **kwargs):
         if self.raffle.raffled:
             raise RuntimeError('This raffle is already closed')
+        if self.raffle.quantity <= self.raffle.raffleapplication_set.count():
+            raise RuntimeError('The maximum applications was reached')
         super().save(*args, **kwargs)

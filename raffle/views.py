@@ -1,8 +1,11 @@
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import RetrieveUpdateDestroyAPIView, ListCreateAPIView, GenericAPIView
+from rest_framework.generics import RetrieveUpdateDestroyAPIView, ListCreateAPIView, GenericAPIView, \
+    CreateAPIView
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from raffle.serializers import RaffleSerializer
+from raffle.models import Raffle
+from raffle.serializers import RaffleSerializer, RaffleApplicationSerializer
 from raffle.service_api import ServiceLotteryException
 
 
@@ -47,3 +50,20 @@ class ExecuteRaffleAPIView(GenericAPIView):
 
         serializer = self.get_serializer(instance=obj)
         return Response(serializer.data)
+
+
+class RaffleApplicationAPIView(GenericAPIView):
+    permission_classes = (AllowAny,)
+    queryset = Raffle.objects.filter(closed_in__isnull=True)
+    serializer_class = RaffleApplicationSerializer
+
+    def put(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save(raffle=self.get_object())
+        except RuntimeError as e:
+            raise ValidationError(str(e))
+        return Response(serializer.data)
+
+
