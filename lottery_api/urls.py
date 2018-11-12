@@ -15,7 +15,6 @@ schema_view = get_schema_view(
 )
 
 
-
 urlpatterns = [
     url(r'auth/', include('authentication.urls')),
 

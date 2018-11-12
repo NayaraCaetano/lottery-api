@@ -47,7 +47,7 @@ INSTALLED_APPS = [
 
     # Project
     'authentication',
-
+    'raffle',
 ]
 
 MIDDLEWARE = [
