@@ -17,6 +17,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     url(r'auth/', include('authentication.urls')),
+    url(r'raffle/', include('raffle.urls')),
 
     # Others
     url(r'^admin/', admin.site.urls),
