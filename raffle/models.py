@@ -2,6 +2,8 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from raffle.service_api import execute_raffle
+
 
 class Raffle(models.Model):
     creator = models.ForeignKey('authentication.User', on_delete=models.PROTECT)
@@ -18,6 +20,13 @@ class Raffle(models.Model):
     @property
     def winners(self):
         return self.raffleapplication_set.filter(winner=True)
+
+    def execute_raffle(self):
+        items = self.raffleapplication_set.exclude(winner=True).values_list('id', flat=True)
+        if not items:
+            raise RuntimeError('There are no options to draw')
+        response = execute_raffle(list(items))
+        items.filter(id=response['result']).update(winner=True)
 
 
 class RaffleApplication(models.Model):

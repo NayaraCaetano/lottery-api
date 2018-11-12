@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.urls import reverse_lazy
 from model_mommy import mommy
@@ -6,6 +8,7 @@ from rest_framework.test import APIClient
 
 from authentication.models import User
 from raffle.models import Raffle, RaffleApplication
+from raffle.service_api import ServiceLotteryException
 
 
 def data_raffle():
@@ -129,3 +132,57 @@ class RaffleRetrieveUpdateDestroyAPIViewTestCase(TestCase):
         response = self.client.delete(self.url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Raffle.objects.count(), 1)
+
+    def test_close_raffle(self):
+        self.client.force_authenticate(self.user)
+        data = data_raffle()
+        data['close_raffle'] = True
+        response = self.client.patch(self.url, data=data)
+        self.assertEqual(response.status_code, 200)
+        self.obj.refresh_from_db()
+        self.assertIsNotNone(self.obj.closed_in)
+
+
+class ExecuteRaffleAPIView(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = mommy.make(User)
+        self.obj = mommy.make(Raffle, creator=self.user)
+        self.url = reverse_lazy('raffle_execute', kwargs={'pk': self.obj.pk})
+
+    def test_only_authenticated_users(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_execute_only_user_raffles(self):
+        self.client.force_authenticate(self.user)
+        other = mommy.make(Raffle)
+        url = reverse_lazy('raffle_execute', kwargs={'pk': other.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    @patch('raffle.models.execute_raffle', side_effect=ServiceLotteryException())
+    def test_return_if_service_error(self, mock_execution):
+        self.client.force_authenticate(self.user)
+        mommy.make(RaffleApplication, raffle=self.obj)
+        response = self.client.get(self.url)
+        mock_execution.assert_called()
+        self.assertEqual(response.status_code, 400)
+
+    def test_return_if_none_applicatinos(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 400)
+
+    @patch('raffle.models.execute_raffle', return_value={'result': 1})
+    def test_return_if_ok(self, mock_execution):
+        self.client.force_authenticate(self.user)
+        mommy.make(RaffleApplication, raffle=self.obj)
+        mommy.make(RaffleApplication, raffle=self.obj)
+        mommy.make(RaffleApplication, raffle=self.obj)
+        mommy.make(RaffleApplication, raffle=self.obj)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        mock_execution.assert_called()
+        self.assertEqual(len(response.json()['winners']), 1)

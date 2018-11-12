@@ -14,3 +14,5 @@ pytest-cov==2.6.0
 sentry_sdk==0.5.4
 drf-yasg==1.11.0
 djangorestframework-jwt==1.11.0
+requests==2.20.1
+requests-cache==0.4.13

@@ -16,6 +16,7 @@ services:
             - DEBUG=True
             - BASE_URL=http://localhost
             - PORT=8000
+            - LOTTERY_SERVICE_URL=https://nayara-lottery-service.herokuapp.com/
     database:
         image: postgres:alpine
         ports:

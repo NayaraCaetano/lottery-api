@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.utils import timezone
 from model_mommy import mommy
@@ -24,3 +26,17 @@ class RaffleTestCase(TestCase):
         raffle = mommy.make(Raffle, closed_in=timezone.now())
         with self.assertRaises(RuntimeError):
             mommy.make(RaffleApplication, raffle=raffle)
+
+    @patch('raffle.models.execute_raffle', return_value={'result': '1'})
+    def test_execute_raffle(self, mock_execute):
+        raffle = mommy.make(Raffle)
+        apl = mommy.make(RaffleApplication, raffle=raffle)
+        raffle.execute_raffle()
+        mock_execute.assert_called()
+        apl.refresh_from_db()
+        self.assertTrue(apl.winner)
+
+    def test_execute_raffle_raises_if_none_applications(self):
+        raffle = mommy.make(Raffle)
+        with self.assertRaises(RuntimeError):
+            raffle.execute_raffle()

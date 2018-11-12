@@ -154,3 +154,5 @@ sentry_sdk.init(
     dsn=config('RAVEN_DSN', default=''),
     integrations=[DjangoIntegration()]
 )
+
+LOTTERY_SERVICE_URL = config('LOTTERY_SERVICE_URL', default='')
