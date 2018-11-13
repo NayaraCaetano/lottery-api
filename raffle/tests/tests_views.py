@@ -82,7 +82,7 @@ class RaffleRetrieveUpdateDestroyAPIViewTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = mommy.make(User)
-        self.obj = mommy.make(Raffle, creator=self.user)
+        self.obj = mommy.make(Raffle, creator=self.user, quantity=99)
         self.url = reverse_lazy('raffle_details', kwargs={'pk': self.obj.pk})
 
     def test_only_authenticated_users(self):
@@ -165,7 +165,7 @@ class ExecuteRaffleAPIViewTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = mommy.make(User)
-        self.obj = mommy.make(Raffle, creator=self.user)
+        self.obj = mommy.make(Raffle, creator=self.user, quantity=99)
         self.url = reverse_lazy('raffle_execute', kwargs={'pk': self.obj.pk})
 
     def test_only_authenticated_users(self):

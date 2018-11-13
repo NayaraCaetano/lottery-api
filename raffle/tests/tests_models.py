@@ -16,7 +16,7 @@ class RaffleTestCase(TestCase):
         self.assertFalse(raffle_2.raffled)
 
     def test_property_winners(self):
-        raffle = mommy.make(Raffle)
+        raffle = mommy.make(Raffle, quantity=99)
         mommy.make(RaffleApplication, raffle=raffle)
         mommy.make(RaffleApplication, raffle=raffle, winner=True)
         raffle.refresh_from_db()
@@ -29,7 +29,7 @@ class RaffleTestCase(TestCase):
 
     @patch('raffle.models.execute_raffle', return_value={'result': '1'})
     def test_execute_raffle(self, mock_execute):
-        raffle = mommy.make(Raffle)
+        raffle = mommy.make(Raffle, quantity=99)
         apl = mommy.make(RaffleApplication, raffle=raffle)
         raffle.execute_raffle()
         mock_execute.assert_called()
